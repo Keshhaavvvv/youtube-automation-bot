@@ -1,0 +1,25 @@
+# .gitignore
+__pycache__/
+temp/
+token.json
+credentials.json
+history.txt
+.env
+*.mp4
+*.mp3
+*.jpg
+config.py
+client_secret.jsoncreate_outro.py
+start.bat
+test_speed.py
+text.txt
+client_secret.json
+client_secret.json
+config.py
+token.json
+credentials.json
+temp/
+create_outro.py
+start.bat
+test_speed.py
+text.txt
