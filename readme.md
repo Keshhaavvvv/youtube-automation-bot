@@ -1,159 +1,118 @@
-YouTube Automation Engine
+AI Dual-Channel Automation Engine
 1. Project Concept
-This software is a fully autonomous "Faceless Channel" generator. It functions as a virtual production studio where different Python modules act as specialized employees (Writer, Editor, Artist, Manager).
+This software is a high-frequency autonomous video production engine designed to operate a "Faceless Channel" ecosystem. Unlike standard automation tools that target a single demographic, this system implements a Dual-Channel Architecture. It generates viral short-form and long-form content in English and simultaneously adapts, translates, and renders a localized version for the Hindi (Indian) market.
 
-The system is designed to generate high-retention content in two distinct formats:
-
-YouTube Shorts: Fast-paced, vertical (9:16), under 60 seconds.
-
-Long Form Documentaries: Cinematic, horizontal (16:9), 10+ minutes long.
-
-Unlike basic automation scripts, this engine features "Smart Logic" to handle aspect ratios, music sentiment, and automated decision-making without user intervention.
+The engine functions as a virtual production studio, orchestrating distinct modules for scripting, asset retrieval, translation, audio synchronization, and video rendering. It is engineered for high retention, utilizing psychometric hooks and algorithmic pacing to maximize viewer engagement on platforms like YouTube Shorts.
 
 2. Technical Architecture & Features
-We developed this bot through several distinct phases of logic refinement. Below are the key systems implemented:
+The system operates on a modular architecture, allowing for independent upgrades to specific components. Below are the core subsystems:
 
-A. The AI Writer (Groq & Llama 3)
-API: Uses Groq for ultra-fast inference.
+A. The Retention-Focused Writer (Groq & Llama 3)
+Negative Hook Strategy: The AI is prompted to generate scripts that utilize "Negative Pattern Interrupts" (e.g., "Stop doing this," "You are being lied to") to prevent scroll-past behavior.
 
-Logic: Implements a "Chunking Strategy" for long-form content. Instead of asking for a 1500-word script at once (which AI often fails at), it generates the script in three distinct parts (Intro, Body, Conclusion) and stitches them together to guarantee 10+ minute durations.
+Loop Logic: Scripts are engineered with circular narratives where the ending sentence grammatically flows back into the opening hook, encouraging repeated viewing sessions.
 
-Brainstorming: Includes a "Creative Partner" mode that reads your history.txt and suggests 10 fresh, viral topics you haven't covered yet.
+Topic Exclusion: A persistent history log ensures the AI never generates duplicate content, forcing it to brainstorm novel topics based on real-time trends or deep psychological analysis.
 
-B. The Visual Engine (Smart Scale-to-Fill)
-Source: Fetches stock footage from Pexels and Pixabay.
+B. The Dual-Channel Translation Engine
+Contextual Hinglish: The system does not use literal translation. It employs a dedicated AI agent to rewrite English scripts into "Viral Urban Hinglish"—a natural blend of Hindi and English widely consumed in India.
 
-Smart Crop: Implements a mathematical "Scale-to-Fill" algorithm. It calculates the exact zoom factor required to cover the target screen (Vertical or Horizontal) and centers the footage. This eliminates black bars and prevents "blank strip" errors.
+Tone Preservation: The translator is instructed to maintain the specific emotional tone (Dark, Upbeat, Mystery) of the original script, replacing idioms rather than translating them word-for-word.
 
-Strict Filtering: Automatically rejects landscape videos when making Shorts, and portrait videos when making Long Form, ensuring high production value.
+Asset Reuse: To maximize efficiency, the system generates visual assets (stock footage, AI images, background music) once for the English video and reuses them for the Hindi render, significantly reducing API usage and render times.
 
-C. The Audio Engineer (Smart Tagging & Randomization)
-Voice: Uses Edge TTS with a +10% speed increase for better retention.
+C. Visual Engine & Smart Rendering
+Direct FFmpeg Compositing: The engine bypasses standard editing overhead by calculating exact pixel coordinates for cropping and resizing. This eliminates "odd-pixel" crashes (e.g., 1079px vs 1080px) and ensures strictly compliant 9:16 or 16:9 output.
 
-Music Library: Replaces folder-based sorting with a "Master Library" system. Files are tagged via filenames (e.g., Epic_Action_Sad.mp3). The bot scans keywords to find tracks that match the video's mood, allowing one file to serve multiple genres without duplication.
+Hybrid Sourcing: The system dynamically selects between Pexels/Pixabay stock footage for realistic scenes and Pollinations AI image generation for abstract or impossible concepts (e.g., "Cyberpunk Ancient Rome").
 
-Transitions: Scans an assets/transitions/ folder and randomly selects different SFX (Swoosh, Pop, Glitch) for every scene change to prevent repetition.
+Smart Fill: A mathematical "Scale-to-Fill" algorithm calculates the precise zoom factor required to fit horizontal footage into vertical screens without black bars or blank strips.
 
-D. The Editor (Turbo Render)
-Multi-Threading: The rendering engine utilizes threads=MAX_CORES to unlock multi-core CPU processing.
+D. Audio Engineering (Elastic Sync)
+Elastic Synchronization: Hindi audio is often 20-30% longer than English. The system measures the duration of the generated Hindi audio and mathematically stretches or compresses the subtitle timestamps to ensure perfect synchronization without drifting.
 
-Optimization: "Ken Burns" (Dynamic Zoom) effects are disabled for Long Form videos to prevent CPU bottlenecks, ensuring 10-minute videos render in ~30 minutes instead of 4+ hours.
+Smart Volume Logic: Sound effects are dynamically leveled based on type. "Impact" sounds are boosted (1.2x), while repetitive sounds like "Dings" are attenuated (0.6x) to prevent listener fatigue.
 
-Subtitle Logic: Hardcoded positioning ensures subtitles appear in the "Safe Zone" (Bottom 20%) for cinematic videos, preventing them from overlapping with headers or faces.
-
-E. Auto-Pilot (Timeouts)
-Hands-Free: The system includes a timer on all user inputs. If no input is detected within 60 seconds, the bot automatically selects default values (Brainstorm Topic -> Upbeat Music -> Upload to YouTube), allowing for fully unattended operation.
+Speed Control: Voiceovers are generated at +15% speed to match the fast-paced nature of modern short-form content.
 
 3. Installation & Setup
 Prerequisites
 Python 3.10+
 
-ImageMagick (Required for text rendering)
+ImageMagick (Required for dynamic text rendering)
 
-FFmpeg (Installed via MoviePy)
+FFmpeg (Essential for video encoding)
 
 Dependencies
-Install the required libraries:
-
-Bash
-
-pip install moviepy requests edge-tts google-api-python-client google-auth-oauthlib google-auth-httplib2 groq numpy pandas
+Install the required Python libraries:
+pip install moviepy requests edge-tts google-api-python-client google-auth-oauthlib google-auth-httplib2 groq numpy pandas imageio-ffmpeg
 
 Folder Structure
-Ensure your project directory is set up as follows:
-
-Plaintext
-
+Ensure your project directory is organized as follows:
 /project_root
  │
- ├── bot.py                 # Main entry point (The Manager)
- ├── config.py              # Settings and API keys
- ├── generators.py          # Script writing and asset gathering
- ├── media_engine.py        # Video editing and rendering
- ├── effects.py             # Visual effects and thumbnails
- ├── studio.py              # YouTube Upload API and Sheets logging
+ ├── bot.py                 # Main Orchestrator (The Manager)
+ ├── config.py              # Configuration and API Keys
+ ├── generators.py          # Scripting, Translation, and Asset Gathering
+ ├── media_engine.py        # Video Editing, Compositing, and FFmpeg logic
+ ├── studio.py              # YouTube API Authentication and Uploads
+ ├── translator.py          # Dedicated Hindi/Hinglish Logic
  │
  ├── /assets
- │    ├── transition.mp3    # Fallback sound
- │    ├── subscribe.mp4     # Green screen overlay
- │    ├── outro.mp4         # (Optional) Fixed outro video
- │    └── /transitions      # Add multiple .mp3 files here (pop, swoosh)
+ │    ├── /sfx              # Sound effects (pop.mp3, whoosh.mp3)
+ │    └── /transitions      # Visual/Audio transition assets
  │
- ├── /songs
- │    └── /Master_Library   # Put ALL mp3 files here. Name them with keywords.
- │
- └── /history.txt           # Stores list of created videos
-4. Configuration
-Open config.py to set your API keys and preferences.
+ ├── /temp                  # Temporary storage for current session assets
+ └── history.txt            # Database of previously generated topics
 
-API Keys: Add your Groq, Pexels, and Google API keys.
+ 4. Configuration
+Open config.py to configure your environment:
 
-Channel Name: Update the CHANNEL_NAME variable for watermarks.
+API Keys: Input valid keys for Groq (AI), Pexels (Stock), and Google (YouTube Data API).
 
-Video Settings: You can adjust max_scenes to control video length. (Recommended: 150 scenes for 10-minute videos).
+Channel Profiles: Configure client_secrets_english.json and client_secrets_hindi.json for dual-channel authentication.
+
+Render Settings: Adjust VIDEO_MODE defaults (Shorts/Long) and thread counts based on your CPU capabilities.
 
 5. How to Use
-Manual Mode
-Run the bot: python bot.py
+Operation Modes
+Run the system via the command line: python bot.py
 
-Select your mode: 1 for Shorts, 2 for Long Form.
+Video Format Selection: Choose between Shorts (Vertical) or Long Form (Horizontal).
 
-Select a topic: Choose "Brainstorm" to get ideas or type your own.
+Target Audience:
 
-Select Music: Choose a mood (e.g., Thrilling, Sad).
+English Only: Generates and uploads to the US channel.
 
-Review: The bot will pause after rendering. Watch the video file.
+Hindi Only: Generates the English master (skipped render) and produces the Hindi version.
 
-Upload: Type y to upload to YouTube automatically.
+Both: Full Dual-Channel automation.
 
-Auto-Pilot Mode
-Run the bot: python bot.py
+Topic Selection: Choose from Real-Time Trends (News/Finance), AI Brainstorming, or Manual Input.
 
-Do nothing.
+Auto-Pilot
+If no input is provided within 60 seconds, the system defaults to "Auto-Pilot Mode." It will automatically select "Both Channels," generate a viral topic, produce the content, and upload to the respective YouTube channels without human intervention.
 
-After 60 seconds, the bot will automatically:
+6. Dual-Channel Workflow
+The system follows a strict linear pipeline to ensure consistency across languages:
 
-Select Long Form mode.
+Script Generation: The AI writes a high-retention English script.
 
-Brainstorm a viral topic.
+Asset Acquisition: Stock footage and AI art are gathered based on English keywords.
 
-Select "Upbeat" music.
+English Production: Audio is generated, and the English video is rendered (or skipped if "Hindi Only" is selected).
 
-Generate the video.
+Translation: The script is passed to the Translation Engine for Hinglish adaptation.
 
-Wait 10 minutes (for render/review buffer) and then auto-upload to YouTube.
+Audio Replacement: Hindi voiceovers are generated using neural voices (Swara/Madhur).
 
-6. Common Issues & Fixes (New Device Setup)
-Problem: Rendering takes 3+ hours
-Cause: "Ken Burns" (Zoom) effect forces single-core processing on every pixel.
+Re-Compositing: The original visual timeline is preserved, but audio tracks and subtitles are swapped for the Hindi counterparts.
 
-Fix: Ensure you are using the latest media_engine.py which has "Static Mode" enabled. This utilizes multi-threading (threads=8) and drops render time to ~30 minutes.
+Deployment: Metadata (Titles/Tags) is translated and optimized for high-CTR keywords before uploading to the respective channels.
 
-Problem: "Blank Strip" or Black Bars in Video
-Cause: Trying to fit a Landscape video into a Vertical Short (or vice versa).
-
-Fix: The bot now uses a "Scale-to-Fill" mathematical formula. It calculates the exact zoom needed to cover the screen and crops the excess.
-
-Problem: Subtitles are missing or metadata empty
-Cause: Special characters in the script (like # or *) confuse the TTS engine.
-
-Fix: The generators.py file now includes a text cleaner regex to strip these characters before generating audio.
-
-Problem: "MoviePy Error: ImageMagick binary not found"
-Cause: ImageMagick is not installed or not in the system PATH.
-
-Fix: Install ImageMagick. Open config.py and ensure IMAGEMAGICK_PATH points to the magick.exe file (e.g., C:\Program Files\ImageMagick...\magick.exe).
-
-Problem: "OSError: MoviePy error: the file is not an audio file"
-Cause: You likely pasted a Shortcut (.lnk) file into the songs folder instead of the actual .mp3.
-
-Fix: Only put actual .mp3 files in the /songs/Master_Library folder.
-License & Usage Rights:
-
-This software is the result of significant personal effort and development time. It is intended for personal use and demonstration purposes only.
+7. License & Usage Rights
+This software is the result of proprietary development and is intended for personal use and demonstration purposes only.
 
 Do Not Distribute: You are not permitted to copy, reproduce, distribute, or sell this source code, in whole or in part, without explicit written permission.
 
-No Commercial Derivatives: Creating commercial products or services based on this specific codebase is strictly prohibited.
-
-Thank you for respecting the hard work that went into building this automation engine.
+No Commercial Derivatives: Creating commercial products or "Software as a Service" (SaaS) platforms based on this specific codebase is strictly prohibited.

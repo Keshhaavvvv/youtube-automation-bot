@@ -1,31 +1,48 @@
 import os
+import pickle
 from google_auth_oauthlib.flow import InstalledAppFlow
 
-# The permissions the bot needs
+# STRICT scopes to ensure we get upload permissions
 SCOPES = [
     'https://www.googleapis.com/auth/youtube.upload',
-    'https://www.googleapis.com/auth/drive.file',
-    'https://www.googleapis.com/auth/spreadsheets'
+    'https://www.googleapis.com/auth/youtube',
+    'https://www.googleapis.com/auth/spreadsheets'  # Added since your screen showed it
 ]
 
-def authenticate():
-    # Check if the secret file exists
-    if not os.path.exists('client_secret.json'):
-        print("ERROR: client_secret.json not found! Please check Step 2.")
+def authenticate_user(token_file):
+    creds = None
+    
+    # 1. Force delete old token to ensure fresh login
+    if os.path.exists(token_file):
+        os.remove(token_file)
+        print(f"   🗑️  Deleted old {token_file} to force fresh login.")
+
+    # 2. Check for client secret
+    if not os.path.exists("client_secret.json"):
+        print("   ❌ Error: 'client_secret.json' not found.")
         return
 
-    # Start the login process
-    flow = InstalledAppFlow.from_client_secrets_file(
-        'client_secret.json', SCOPES)
-    
-    # Open a browser window for you to log in
+    # 3. Start Authentication
+    flow = InstalledAppFlow.from_client_secrets_file("client_secret.json", SCOPES)
     creds = flow.run_local_server(port=0)
 
-    # Save the login token
-    with open('token.json', 'w') as token:
-        token.write(creds.to_json())
-    
-    print("\nSUCCESS! 'token.json' has been created. You are ready for the next step.")
+    # 4. Save the new token
+    with open(token_file, "wb") as token:
+        pickle.dump(creds, token)
+    print(f"   ✅ [Auth] Success! Saved credentials to '{token_file}'")
 
-if __name__ == '__main__':
-    authenticate()
+if __name__ == "__main__":
+    print("\n--- DUAL CHANNEL AUTHENTICATION ---")
+    print("1. Authenticate ENGLISH Channel (Main)")
+    print("2. Authenticate HINDI Channel (Secondary/Manager)")
+    
+    choice = input("\nEnter 1 or 2: ").strip()
+    
+    if choice == "1":
+        print("\n🔐 Authenticating ENGLISH Channel...")
+        authenticate_user("token.json")
+    elif choice == "2":
+        print("\n🔐 Authenticating HINDI Channel...")
+        authenticate_user("token_hindi.json")
+    else:
+        print("Invalid choice.")

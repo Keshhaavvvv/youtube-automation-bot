@@ -3,47 +3,78 @@ import os
 import time
 import shutil
 import gc
-import math
+import pickle # <--- Added for reading binary tokens
 from datetime import datetime
-from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
+from google.auth.transport.requests import Request # Needed for refreshing
 from moviepy.editor import VideoFileClip
 import config
 
 # --- TEMP DIRECTORY ---
 TEMP_DIR = "temp"
 
-# --- GOOGLE SERVICES ---
-def get_services():
-    if os.path.exists('token.json'):
+# --- GOOGLE SERVICES (MULTI-CHANNEL) ---
+def get_services(profile="english"):
+    """
+    Authenticates based on the profile ('english' or 'hindi').
+    Loads credentials using Pickle (Binary).
+    """
+    token_file = 'token_hindi.json' if profile == 'hindi' else 'token.json'
+    
+    print(f"   [Studio] Connecting to {profile.upper()} channel ({token_file})...")
+    
+    creds = None
+    
+    if os.path.exists(token_file):
         try:
-            creds = Credentials.from_authorized_user_file('token.json', [
-                'https://www.googleapis.com/auth/youtube.upload',
-                'https://www.googleapis.com/auth/drive.file',
-                'https://www.googleapis.com/auth/spreadsheets'
-            ])
-            return build('sheets', 'v4', credentials=creds), build('youtube', 'v3', credentials=creds)
-        except: return None, None
-    return None, None
+            # FIX: Open in Binary Mode ('rb') and use pickle.load
+            with open(token_file, 'rb') as token:
+                creds = pickle.load(token)
+        except Exception as e:
+            print(f"   [Auth Error] Could not load credentials: {e}")
+            return None, None
+            
+    # Refresh if expired
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            try:
+                creds.refresh(Request())
+            except Exception as e:
+                print(f"   [Auth] Token expired and refresh failed: {e}")
+                return None, None
+        else:
+            print("   [Auth] No valid token found. Please run auth.py.")
+            return None, None
 
-def update_sheet(service, topic, url):
+    try:
+        return build('sheets', 'v4', credentials=creds), build('youtube', 'v3', credentials=creds)
+    except Exception as e:
+        print(f"   [Service Error] {e}")
+        return None, None
+
+def update_sheet(service, topic, url, profile="english"):
     if not url: return
     try:
         # 1. Get Current Timestamp
         upload_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
-        # 2. Get Video Mode (Shorts/Long)
+        # 2. Get Video Mode
         mode = config.VIDEO_MODE if hasattr(config, 'VIDEO_MODE') else "Shorts"
         
-        # 3. Prepare Row Data: [Date, Mode, Topic, Status, Link]
+        # 3. Determine Target Sheet Tab
+        sheet_range = "Hindi_Uploads!A1" if profile == "hindi" else "Sheet1!A1"
+        
+        # 4. Prepare Row Data
         row = [[upload_time, mode, f"{topic}", "Uploaded", url]]
         
         service.spreadsheets().values().append(
-            spreadsheetId=config.SPREADSHEET_ID, range="Sheet1!A1",
-            valueInputOption="USER_ENTERED", body={"values": row}
+            spreadsheetId=config.SPREADSHEET_ID, 
+            range=sheet_range,
+            valueInputOption="USER_ENTERED", 
+            body={"values": row}
         ).execute()
-        print(f"   Sheet Updated: {upload_time} | {mode}")
+        print(f"   [Sheet] Updated '{sheet_range}' for {profile.upper()}.")
     except Exception as e: 
         print(f"   [Sheet Error] Could not update: {e}")
 
@@ -55,7 +86,6 @@ def generate_seo_description(topic, video_path):
         duration = clip.duration
         clip.close()
         
-        # Calculate timestamps
         t_body = int(duration * 0.20)
         t_conclusion = int(duration * 0.85)
         
@@ -78,11 +108,17 @@ TIMESTAMPS:
     except:
         return f"{topic}\n\n#shorts #facts"
 
-def upload_to_youtube(youtube, file_path, thumbnail_path, title, topic, script, tags):
-    print(f"4. Uploading Video: {title}...")
+def upload_to_youtube(youtube, file_path, thumbnail_path, title, description, script_placeholder, tags, profile="english"):
+    """
+    Uploads video to the connected YouTube channel.
+    """
+    print(f"4. Uploading to {profile.upper()} Channel: {title}...")
     
-    # Generate Smart Description
-    final_description = generate_seo_description(topic, file_path)
+    # --- SMART DESCRIPTION LOGIC ---
+    final_description = description
+    if len(description) < 50:
+        print("   [SEO] Generating auto-description/chapters...")
+        final_description = generate_seo_description(description, file_path)
     
     try:
         body = {
@@ -94,33 +130,35 @@ def upload_to_youtube(youtube, file_path, thumbnail_path, title, topic, script, 
             },
             'status': {'privacyStatus': 'public', 'selfDeclaredMadeForKids': False}
         }
+        
         media = MediaFileUpload(file_path, chunksize=-1, resumable=True)
         request = youtube.videos().insert(part=','.join(body.keys()), body=body, media_body=media)
         response = request.execute()
-        print(f"   Video Uploaded! ID: {response['id']}")
         
-        # --- THUMBNAIL UPLOAD (DEBUG MODE) ---
+        video_id = response['id']
+        print(f"   [Success] Video ID: {video_id}")
+        
+        # --- THUMBNAIL UPLOAD ---
         if thumbnail_path and os.path.exists(thumbnail_path):
-             print(f"   [Thumbnail] Attempting upload: {thumbnail_path}")
+             print(f"   [Thumbnail] Uploading: {thumbnail_path}")
              try:
-                 youtube.thumbnails().set(videoId=response['id'], media_body=MediaFileUpload(thumbnail_path)).execute()
-                 print("   [Thumbnail] Success! Custom thumbnail set.")
+                 youtube.thumbnails().set(videoId=video_id, media_body=MediaFileUpload(thumbnail_path)).execute()
+                 print("   [Thumbnail] Set successfully.")
              except Exception as e:
-                 print(f"   [Thumbnail Error] YouTube Rejected Image: {e}")
-                 print("   (Note: YouTube API often blocks custom thumbnails for Shorts.)")
+                 print(f"   [Thumbnail Warning] {e}")
         else:
-            print("   [Thumbnail] No file found to upload.")
+            print("   [Thumbnail] Skipped (No file).")
 
-        return f"https://youtu.be/{response['id']}"
+        return f"https://youtu.be/{video_id}"
+        
     except Exception as e:
-        print(f"   [Error] Upload Failed: {e}")
+        print(f"   [Upload Error] {e}")
         return None
 
 # --- FILE MANAGEMENT ---
 def safe_move(src, dst):
     for i in range(5):
         try:
-            # Ensure we are moving to a file path, not just a dir
             shutil.move(src, os.path.join(dst, os.path.basename(src)))
             return True
         except Exception as e:
@@ -143,34 +181,62 @@ def force_delete(file_path):
 
 def manage_session_files(session_id, was_uploaded):
     print("   [File Manager] Cleaning up session files...")
+    import gc
     gc.collect()
     
-    final_video = f"final_{session_id}.mp4"
+    TEMP_DIR = "temp" # Ensure this is defined
     
-    # 1. Handle Final Video
-    if was_uploaded:
+    # 1. HANDLE FINAL VIDEOS (Main Folder)
+    video_patterns = [
+        f"finished_{session_id}.mp4", 
+        f"finished_{session_id}_HINDI.mp4",
+        f"finished_{session_id}",
+        f"finished_{session_id}_HINDI_HINDI"
+    ]
+    
+    for final_video in video_patterns:
         if os.path.exists(final_video):
-            if force_delete(final_video):
-                print(f"   [Cleanup] Upload successful. Deleted {final_video}")
+            if was_uploaded:
+                if force_delete(final_video):
+                    print(f"   [Cleanup] Deleted {final_video}")
             else:
-                print(f"   [Warning] Could not delete {final_video} (Locked)")
-    else:
-        if os.path.exists(final_video):
-            target_dir = "pending_uploads"
-            if not os.path.exists(target_dir): os.makedirs(target_dir)
-            try:
-                safe_move(final_video, target_dir)
-                print(f"   [Saved] Upload failed. Video saved to {target_dir}/")
-            except: pass
+                target_dir = "pending_uploads"
+                if not os.path.exists(target_dir): os.makedirs(target_dir)
+                try:
+                    safe_move(final_video, target_dir)
+                    print(f"   [Saved] Moved {final_video} to {target_dir}/")
+                except: pass
 
-    # 2. Clean 'temp' Folder
+    # 2. AGGRESSIVE ROOT CLEANUP
     files_cleaned = 0
+    try:
+        for f in os.listdir('.'):
+            if (session_id in f) or ("TEMP_MPY" in f and session_id in f):
+                if f.startswith("finished_") and not was_uploaded: continue
+                if os.path.isfile(f):
+                    if force_delete(f):
+                        files_cleaned += 1
+                        print(f"   [Cleanup] Deleted stray file: {f}")
+    except Exception as e:
+        print(f"   [Warning] Root cleanup scan failed: {e}")
+
+    # 3. CLEAN 'TEMP' FOLDER (Audio, Images, Description)
     if os.path.exists(TEMP_DIR):
         for f in os.listdir(TEMP_DIR):
-            if session_id in f:
+            # --- THE FIX: Check for session ID OR explicit 'description.txt' ---
+            if session_id in f or f == "description.txt":
                 file_path = os.path.join(TEMP_DIR, f)
+                if force_delete(file_path):
+                    files_cleaned += 1
+                    
+    # 4. CLEAN 'TEMP/SCENES' FOLDER
+    scenes_dir = os.path.join(TEMP_DIR, "scenes")
+    if os.path.exists(scenes_dir):
+        for f in os.listdir(scenes_dir):
+            if session_id in f:
+                file_path = os.path.join(scenes_dir, f)
                 if force_delete(file_path):
                     files_cleaned += 1
     
     if files_cleaned > 0:
-        print(f"   [Cleanup] Removed {files_cleaned} temporary files from {TEMP_DIR}/.")
+        print(f"   [Cleanup] Removed {files_cleaned} temporary assets.")
